@@ -35,7 +35,7 @@ steps:
 # Deploy
 - script: |
     az containerapp update \
-      --name azure-flask-app \
+      --name devops \
       --resource-group $(resourceGroup) \
       --image $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
   displayName: Deploy
