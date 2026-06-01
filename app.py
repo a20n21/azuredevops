@@ -5,7 +5,7 @@ app = Flask(__name__)
 @app.route("/")
 def home():
     return {
-        "application": "Azure Container Apps",
+        "application": "Azure Container Apps Teste",
         "status": "running"
     }
 
