@@ -12,41 +12,36 @@ variables:
 
 steps:
 
-# 1. Build Docker image
+# Login Azure via CLI (sem service connection)
+- task: AzureCLI@2
+  displayName: Azure Login
+  inputs:
+    azureSubscription: ''
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      az login --use-device-code
+
+# Build Docker
 - script: |
     docker build -t $(imageName):$(Build.BuildId) .
-  displayName: Build Docker Image
+  displayName: Build image
 
-# 2. Login no Azure
-- task: AzureCLI@2
-  displayName: Azure Login + ACR Login
-  inputs:
-    azureSubscription: azure-connection
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      az acr login --name $(acrName)
-
-# 3. Tag image
+# Login ACR
 - script: |
-    docker tag $(imageName):$(Build.BuildId) \
-    $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
-  displayName: Tag Image
+    az acr login --name $(acrName)
+  displayName: Login ACR
 
-# 4. Push no ACR
+# Tag + Push
 - script: |
+    docker tag $(imageName):$(Build.BuildId) $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
     docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
-  displayName: Push to ACR
+  displayName: Push image
 
-# 5. Deploy no Container Apps
-- task: AzureCLI@2
-  displayName: Deploy Container App
-  inputs:
-    azureSubscription: azure-connection
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      az containerapp update \
-        --name $(containerApp) \
-        --resource-group $(resourceGroup) \
-        --image $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+# Deploy
+- script: |
+    az containerapp update \
+      --name $(containerApp) \
+      --resource-group $(resourceGroup) \
+      --image $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+  displayName: Deploy
