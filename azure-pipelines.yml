@@ -7,7 +7,7 @@ pool:
 variables:
   imageName: azure-flask-app
   acrName: acrandersondevops123
-  resourceGroup: rg-devops-lab
+  resourceGroup: devops
 
 steps:
 
