@@ -7,23 +7,19 @@ pool:
 variables:
   imageName: azure-flask-app
   acrName: acrandersondevops123
-  acrLoginServer: acrandersondevops123.azurecr.io
+  resourceGroup: rg-devops-lab
+  containerApp: azure-flask-app
 
 steps:
 
-# 1. Build da imagem
-- task: Docker@2
-  displayName: Build image
-  inputs:
-    command: build
-    repository: $(imageName)
-    Dockerfile: Dockerfile
-    tags: |
-      $(Build.BuildId)
+# 1. Build Docker image
+- script: |
+    docker build -t $(imageName):$(Build.BuildId) .
+  displayName: Build Docker Image
 
 # 2. Login no Azure
 - task: AzureCLI@2
-  displayName: Login Azure
+  displayName: Azure Login + ACR Login
   inputs:
     azureSubscription: azure-connection
     scriptType: bash
@@ -31,15 +27,16 @@ steps:
     inlineScript: |
       az acr login --name $(acrName)
 
-# 3. Tag da imagem
+# 3. Tag image
 - script: |
-    docker tag $(imageName):$(Build.BuildId) $(acrLoginServer)/$(imageName):$(Build.BuildId)
-  displayName: Tag image
+    docker tag $(imageName):$(Build.BuildId) \
+    $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+  displayName: Tag Image
 
 # 4. Push no ACR
 - script: |
-    docker push $(acrLoginServer)/$(imageName):$(Build.BuildId)
-  displayName: Push image
+    docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
+  displayName: Push to ACR
 
 # 5. Deploy no Container Apps
 - task: AzureCLI@2
@@ -50,6 +47,6 @@ steps:
     scriptLocation: inlineScript
     inlineScript: |
       az containerapp update \
-        --name azure-flask-app \
-        --resource-group rg-devops-lab \
-        --image $(acrLoginServer)/$(imageName):$(Build.BuildId)
+        --name $(containerApp) \
+        --resource-group $(resourceGroup) \
+        --image $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
