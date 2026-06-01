@@ -1,0 +1,55 @@
+trigger:
+- main
+
+pool:
+  vmImage: ubuntu-latest
+
+variables:
+  imageName: azure-flask-app
+  acrName: acrandersondevops123
+  acrLoginServer: acrandersondevops123.azurecr.io
+
+steps:
+
+# 1. Build da imagem
+- task: Docker@2
+  displayName: Build image
+  inputs:
+    command: build
+    repository: $(imageName)
+    Dockerfile: Dockerfile
+    tags: |
+      $(Build.BuildId)
+
+# 2. Login no Azure
+- task: AzureCLI@2
+  displayName: Login Azure
+  inputs:
+    azureSubscription: azure-connection
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      az acr login --name $(acrName)
+
+# 3. Tag da imagem
+- script: |
+    docker tag $(imageName):$(Build.BuildId) $(acrLoginServer)/$(imageName):$(Build.BuildId)
+  displayName: Tag image
+
+# 4. Push no ACR
+- script: |
+    docker push $(acrLoginServer)/$(imageName):$(Build.BuildId)
+  displayName: Push image
+
+# 5. Deploy no Container Apps
+- task: AzureCLI@2
+  displayName: Deploy Container App
+  inputs:
+    azureSubscription: azure-connection
+    scriptType: bash
+    scriptLocation: inlineScript
+    inlineScript: |
+      az containerapp update \
+        --name azure-flask-app \
+        --resource-group rg-devops-lab \
+        --image $(acrLoginServer)/$(imageName):$(Build.BuildId)
