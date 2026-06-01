@@ -8,40 +8,34 @@ variables:
   imageName: azure-flask-app
   acrName: acrandersondevops123
   resourceGroup: rg-devops-lab
-  containerApp: azure-flask-app
 
 steps:
 
-# Login Azure via CLI (sem service connection)
-- task: AzureCLI@2
-  displayName: Azure Login
-  inputs:
-    azureSubscription: ''
-    scriptType: bash
-    scriptLocation: inlineScript
-    inlineScript: |
-      az login --use-device-code
-
-# Build Docker
+# Login Azure CLI MANUAL (device code)
 - script: |
-    docker build -t $(imageName):$(Build.BuildId) .
-  displayName: Build image
+    az login --use-device-code
+  displayName: Azure Login
 
 # Login ACR
 - script: |
     az acr login --name $(acrName)
   displayName: Login ACR
 
+# Build
+- script: |
+    docker build -t $(imageName):$(Build.BuildId) .
+  displayName: Build
+
 # Tag + Push
 - script: |
     docker tag $(imageName):$(Build.BuildId) $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
     docker push $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
-  displayName: Push image
+  displayName: Push
 
 # Deploy
 - script: |
     az containerapp update \
-      --name $(containerApp) \
+      --name azure-flask-app \
       --resource-group $(resourceGroup) \
       --image $(acrName).azurecr.io/$(imageName):$(Build.BuildId)
   displayName: Deploy
